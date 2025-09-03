@@ -1,0 +1,65 @@
+@page "/editartransaccion/{Id:int}"
+@inject TransaccionService servicio
+@inject NavigationManager nav
+
+<h3>Editar Transacción</h3>
+
+<EditForm Model="@transaccion" OnValidSubmit="@Guardar">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="mb-3">
+        <label>Tipo</label>
+        <InputSelect class="form-select" @bind-Value="transaccion.Tipo">
+            <option value="Gasto">Gasto</option>
+            <option value="Ingreso">Ingreso</option>
+        </InputSelect>
+    </div>
+
+    <div class="mb-3">
+        <label>Categoría</label>
+        <InputText class="form-control" @bind-Value="transaccion.Categoria" />
+        <ValidationMessage For="@(() => transaccion.Categoria)" />
+    </div>
+
+    <div class="mb-3">
+        <label>Monto</label>
+        <InputNumber class="form-control" @bind-Value="transaccion.Monto" />
+        <ValidationMessage For="@(() => transaccion.Monto)" />
+    </div>
+
+    <div class="mb-3">
+        <label>Fecha</label>
+        <InputDate class="form-control" @bind-Value="transaccion.Fecha" />
+        <ValidationMessage For="@(() => transaccion.Fecha)" />
+    </div>
+
+    <div class="mb-3">
+        <label>Descripción</label>
+        <InputTextArea class="form-control" @bind-Value="transaccion.Descripcion" />
+        <ValidationMessage For="@(() => transaccion.Descripcion)" />
+    </div>
+
+    <button type="submit" class="btn btn-primary">Guardar cambios</button>
+</EditForm>
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    Transaccion transaccion = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var lista = await servicio.ObtenerTodasAsync();
+        transaccion = lista.FirstOrDefault(t => t.Id == Id) ?? new();
+    }
+
+    private async Task Guardar()
+    {
+        
+        await servicio.ActualizarAsync(transaccion);
+        
+        nav.NavigateTo("/resumen");
+    }
+}

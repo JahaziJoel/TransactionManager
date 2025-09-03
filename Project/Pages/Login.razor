@@ -1,0 +1,56 @@
+@page "/login"
+@inject AuthService Auth
+@inject NavigationManager nav
+
+
+
+
+<EditForm class="login" Model="@modeloLogin" OnValidSubmit="ProcesarLogin">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+    <h3 class="titlelogin">Iniciar Sesión</h3>
+
+    @if (!loginInvalido)
+    {
+    <p>Ingresa tus credenciales:</p>
+    }
+    else
+    {
+    <div class="alert alert-danger">Usuario o clave incorrectos.</div>
+    }
+
+    <div class="mb-3">
+        <label>Usuario</label>
+        <InputText class="form-control" @bind-Value="modeloLogin.Usuario" />
+
+    </div>
+
+    <div class="mb-3">
+        <label>Clave</label>
+        <InputText type="password" class="form-control" @bind-Value="modeloLogin.Clave"/>
+    </div>
+    <button class="btn btn-primary" type="submit">Entrar</button>
+</EditForm>
+
+@code {
+    private LoginModel modeloLogin = new();
+    private bool loginInvalido = false;
+
+    private void ProcesarLogin()
+    {
+        if (Auth.Login(modeloLogin.Usuario, modeloLogin.Clave))
+        {
+            nav.NavigateTo("/");
+        }
+        else
+        {
+            loginInvalido = true;
+        }
+    }
+
+    public class LoginModel
+    {
+        public string Usuario {get; set;}= "";
+        public string Clave {get; set;}= "";
+    }
+}

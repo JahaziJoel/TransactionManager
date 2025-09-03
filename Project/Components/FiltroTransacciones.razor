@@ -1,0 +1,96 @@
+@using Microsoft.AspNetCore.Components.Forms
+@inject AuthService Auth
+@inject NavigationManager nav
+
+<div class="card mb-4">
+    <h5 class="mb-3">Buscar Transacciones</h5>
+    <div class="row g-3">
+        <div class="col-md-2">
+            <label>Tipo</label>
+            <select class="form-select" @bind="tipoSeleccionado">
+                <option value="">Todos</option>
+                <option value="Ingreso">Ingreso</option>
+                <option value="Gasto">Gasto</option>
+            </select>
+        </div>
+
+        <div class="col-md-2">
+            <label>Categoría</label>
+            <select class="form-select" @bind="categoriaSeleccionada">
+                <option value="">Todas</option>
+                @foreach (var cat in categoriasUnicas)
+                {
+                    <option value="@cat">@cat</option>
+                }
+            </select>
+        </div>
+
+        <div class="col-md-3">
+            <label>Desde</label>
+            <InputDate @bind-Value="fechaInicio" class="form-control" />
+        </div>
+
+        <div class="col-md-3">
+            <label>Hasta</label>
+            <InputDate @bind-Value="fechaFin" class="form-control"/>
+        </div>
+
+        <div class="col-md-2 d-flex align-items-end gap-2">
+            <button class="btn btn-secondary" @onclick="LimpiarFiltros">Limpiar</button>
+            <button class="btn btn-primary" @onclick="AplicarFiltros">Buscar</button>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public List<Transaccion> Transacciones { get; set; } = new();
+    [Parameter] public EventCallback<List<Transaccion>> OnFiltrar { get; set; }
+
+    private string tipoSeleccionado = "";
+    private string categoriaSeleccionada = "";
+    private DateTime? fechaInicio = null;
+    private DateTime? fechaFin = null;
+
+    private List<string> categoriasUnicas = new();
+
+    protected override void OnParametersSet()
+    {
+        categoriasUnicas = Transacciones
+            .Where(t => !string.IsNullOrWhiteSpace(t.Categoria))
+            .Select(t => t.Categoria)
+            .Distinct()
+            .OrderBy(c => c)
+            .ToList();
+    }
+
+    private async Task AplicarFiltros()
+    {
+        if (Transacciones is null) return;
+
+        var filtradas = Transacciones.AsEnumerable();
+
+        if (!string.IsNullOrWhiteSpace(tipoSeleccionado))
+            filtradas = filtradas.Where(t => t.Tipo == tipoSeleccionado);
+
+        if (!string.IsNullOrWhiteSpace(categoriaSeleccionada))
+            filtradas = filtradas.Where(t => t.Categoria == categoriaSeleccionada);
+
+        if (fechaInicio.HasValue)
+            filtradas = filtradas.Where(t => t.Fecha.Date >= fechaInicio.Value.Date);
+
+        if (fechaFin.HasValue)
+            filtradas = filtradas.Where(t => t.Fecha.Date <= fechaFin.Value.Date);
+
+        await OnFiltrar.InvokeAsync(filtradas.ToList());
+    }
+
+    private async Task LimpiarFiltros()
+    {
+        tipoSeleccionado = "";
+        categoriaSeleccionada = "";
+        fechaInicio = null;
+        fechaFin = null;
+
+        await OnFiltrar.InvokeAsync(Transacciones.ToList());
+    }
+}

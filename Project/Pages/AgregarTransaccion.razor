@@ -1,0 +1,88 @@
+﻿@page "/AgregarTransaccion"
+@inject TransaccionService servicio
+@inject AuthService Auth
+@inject NavigationManager nav
+@using Microsoft.AspNetCore.Components.Forms
+
+<div class="container2">
+    <h3 class="mb-4">Agregar Transacción</h3>
+
+    <EditForm Model="@nueva" OnValidSubmit="@Guardar">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="mb-3">
+            <label>Tipo:</label>
+            <InputSelect class="form-select" @bind-Value="nueva.Tipo">
+                <option value="Gasto">Gasto</option>
+                <option value="Ingreso">Ingreso</option>
+            </InputSelect>
+        </div>
+
+        <div class="mb-3">
+            <label>Categoría:</label>
+            <InputSelect class="form-select" @bind-Value="nueva.Categoria">
+                <option disabled value="">Seleccione una categoría</option>
+                <option value="Salario">Salario</option>
+                <option value="Comida">Comida</option>
+                <option value="Ropa">Ropa</option>
+                <option value="Transporte">Transporte</option>
+                <option value="Salud">Salud</option>
+                <option value="Educación">Educación</option>
+                <option value="Servicio">Servicio</option>
+                <option value="Hogar">Hogar</option>
+                <option value="Otra">Otra</option>
+            </InputSelect>
+            <ValidationMessage For="@(() => nueva.Categoria)" />
+        </div>
+
+        @if (nueva.Categoria == "Otra")
+        {
+            <div class="mb-3">
+                <label>Escriba su categoría:</label>
+                <InputText class="form-control" @bind-Value="nueva.Categoria" />
+                <ValidationMessage For="@(() => nueva.Categoria)" />
+            </div>
+        }
+
+        <div class="mb-3">
+            <label>Monto:</label>
+            <InputNumber class="form-control" @bind-Value="nueva.Monto" />
+            <ValidationMessage For="@(() => nueva.Monto)" />
+        </div>
+
+        <div class="mb-3">
+            <label>Fecha:</label>
+            <InputDate class="form-control" @bind-Value="nueva.Fecha" />
+            <ValidationMessage For="@(() => nueva.Fecha)" />
+        </div>
+
+        <div class="mb-3">
+            <label>Descripción:</label>
+            <InputTextArea class="form-control" @bind-Value="nueva.Descripcion" />
+            <ValidationMessage For="@(() => nueva.Descripcion)" />
+        </div>
+
+        <button type="submit" class="btn btn-primary">Guardar</button>
+    </EditForm>
+</div>
+
+@code {
+    Transaccion nueva = new();
+
+    protected override void OnInitialized()
+    {
+        if (!Auth.EstaAutenticado)
+        {
+            nav.NavigateTo("/login", forceLoad: true);
+        }
+    }
+
+    private async Task Guardar()
+    {
+        nueva.Id = Guid.NewGuid().GetHashCode();
+        await servicio.AgregarAsync(nueva);
+        nueva = new();
+        nav.NavigateTo("/resumen");
+    }
+}

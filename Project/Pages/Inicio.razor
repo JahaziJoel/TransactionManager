@@ -1,0 +1,102 @@
+﻿@page "/"
+@using Blazorise.Charts
+
+@inject TransaccionService TransaccionService
+@inject AuthService Auth
+@inject NavigationManager nav
+
+<h3>Su Resumen Financiero</h3>
+
+@if (cargando)
+{
+    <p>Cargando datos...</p>
+}
+else
+{
+    <div class="div-graficos" style="display: flex; justify-content: left; align-items: flex-end; gap: 6rem; margin-top: 2rem; margin-bottom: 4rem;">
+    
+        <div>
+            <BarChart @ref="chart" TItem="double" Options="options" style="max-width: 400px; height: 500px; margin-top: 2rem; margin-left: 5rem; margin-bottom: 1rem;" />
+        </div>
+
+        <div style="margin-bottom: 70px;">
+            <PieChart TItem="double" @ref="pieChart" style="max-width: 350px; height: 350px;" />
+        </div>
+
+    </div>
+
+    
+}
+
+@code {
+    private PieChart<double>? pieChart;
+    private BarChart<double>? chart;
+    private BarChartOptions options = new();
+    private decimal ingresos;
+    private decimal gastos;
+    private decimal Balance;
+    private bool cargando = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!Auth.EstaAutenticado)
+        {
+            nav.NavigateTo("/login", forceLoad: true);
+            return;
+        }
+
+        var transacciones = await TransaccionService.ObtenerTodasAsync();
+        ingresos = transacciones.Where(t => t.Tipo == "Ingreso").Sum(t => t.Monto);
+        gastos = transacciones.Where(t => t.Tipo == "Gasto").Sum(t => t.Monto);
+        Balance = ingresos - gastos;
+        cargando = false;
+
+        StateHasChanged();
+    }
+    
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!cargando && chart is not null)
+        {
+            await chart.Clear();
+
+            await chart.AddLabelsDatasetsAndUpdate(
+                new[] { "Ingresos", "Gastos", "Balance" },
+                new BarChartDataset<double>
+                {
+                    Label = "Resumen",
+                    Data = new List<double> { (double)ingresos, (double)gastos,(double)Balance },
+                    BackgroundColor = new List<string>
+                    {
+                        ChartColor.FromRgba(75, 192, 192, 0.6f),
+                        ChartColor.FromRgba(255, 99, 132, 0.6f),
+                        Balance >= 0
+                        ? ChartColor.FromRgba(21, 31, 123, 0.7f)
+                        : ChartColor.FromRgba(200, 0, 0, 0.7f)
+                    }
+                }
+            );
+        }
+
+        if (pieChart is not null)
+        {
+            await pieChart.Clear();
+            await pieChart.AddLabelsDatasetsAndUpdate(
+                new[] { "Ingresos", "Gastos", "Balance" },
+                new PieChartDataset<double>
+                {
+                    Label= "Resumen",
+                    Data = new List<double> { (double)ingresos, (double)gastos, (double)Balance },
+                    BackgroundColor = new List<string>
+                    {
+                        ChartColor.FromRgba(75, 192, 192, 0.7f),
+                        ChartColor.FromRgba(255, 99, 132, 0.7f),
+                        Balance >= 0
+                        ? ChartColor.FromRgba(21, 31, 123, 0.7f)
+                        : ChartColor.FromRgba(200, 0, 0, 0.7f)
+                    }
+                });
+        }
+    }
+}

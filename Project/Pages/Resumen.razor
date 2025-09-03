@@ -1,0 +1,116 @@
+﻿@page "/resumen"
+@inject TransaccionService TransaccionService
+@inject NavigationManager nav
+@inject AuthService Auth
+@inject IJSRuntime JS
+
+<h1 class="titulo">Resumen de Transacciones</h1>
+
+@if (transacciones is null)
+{
+    <p>Cargando...</p>
+}
+else
+{
+    <FiltroTransacciones Transacciones="transacciones" OnFiltrar="ActualizarListaFiltrada" />
+
+    @if (!transaccionesFiltradas.Any())
+    {
+        <p>No hay transacciones encontradas con los filtros seleccionados.</p>
+    }
+    else
+    {
+        <div class="resumen-grid">
+            <div class="card ingreso">
+                <h3>Ingresos</h3>
+                <p>@($"RD$ {ingresos:N2}")</p>
+            </div>
+            <div class="card gasto">
+                <h3>Gastos</h3>
+                <p>@($"RD$ {gastos:N2}")</p>
+            </div>
+            <div class="card balance">
+                <h3>Balance</h3>
+                <p>@($"RD$ {(ingresos - gastos):N2}")</p>
+            </div>
+        </div>
+
+        <table class="tabla">
+            <thead>
+                <tr>
+                    <th>Tipo</th>
+                    <th>Categoría</th>
+                    <th>Monto</th>
+                    <th>Descripción</th>
+                    <th>Fecha</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var t in transaccionesFiltradas)
+                {
+                    <tr class="@(t.Tipo == "Ingreso" ? "fila-ingreso" : "fila-gasto")">
+                        <td>@t.Tipo</td>
+                        <td>@t.Categoria</td>
+                        <td>@($"RD$ {t.Monto:N2}")</td>
+                        <td>@t.Descripcion</td>
+                        <td>@t.Fecha.ToShortDateString()</td>
+                        <td>
+                            <div class="acciones-contenedor">
+                                <button class="btn editar" @onclick="@(() => nav.NavigateTo($"/editartransaccion/{t.Id}"))">Editar</button>
+                                <button class="btn eliminar" @onclick="@(() => ConfirmarYEliminar(t.Id))">Eliminar</button>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+}
+
+@code {
+    private List<Transaccion>? transacciones;
+    private List<Transaccion> transaccionesFiltradas = new();
+
+    private decimal ingresos;
+    private decimal gastos;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!Auth.EstaAutenticado)
+        {
+            nav.NavigateTo("/login", forceLoad: true);
+            return;
+        }
+
+        await CargarDatos();
+    }
+
+    private async Task CargarDatos()
+    {
+        transacciones = await TransaccionService.ObtenerTodasAsync() ?? new List<Transaccion>();
+        transaccionesFiltradas = transacciones.ToList();
+
+        ingresos = transaccionesFiltradas.Where(t => t.Tipo == "Ingreso").Sum(t => t.Monto);
+        gastos = transaccionesFiltradas.Where(t => t.Tipo == "Gasto").Sum(t => t.Monto);
+    }
+
+    private async Task ConfirmarYEliminar(int id)
+    {
+        if (await JS.InvokeAsync<bool>("confirm", "¿Estás seguro de borrar esta transacción?"))
+        {
+            await TransaccionService.EliminarAsync(id);
+            await CargarDatos();
+        }
+    }
+
+    private void ActualizarListaFiltrada(List<Transaccion> filtradas)
+    {
+        transaccionesFiltradas = filtradas;
+        ingresos = transaccionesFiltradas.Where(t => t.Tipo == "Ingreso").Sum(t => t.Monto);
+        gastos = transaccionesFiltradas.Where(t => t.Tipo == "Gasto").Sum(t => t.Monto);
+
+        StateHasChanged();
+    }
+
+}
